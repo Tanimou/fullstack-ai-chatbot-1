@@ -59,9 +59,7 @@ async def main():
                         msg=res
                     )
 
-                    stream_data = {}
-                    stream_data[str(token)] = str(msg.dict())
-
+                    stream_data = {str(token): str(msg.dict())}
                     await producer.add_to_stream(stream_data, "response_channel")
 
                     await cache.add_message_to_cache(token=token, source="bot", message_data=msg.dict())

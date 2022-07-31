@@ -25,7 +25,7 @@ redis = Redis()
 async def token_generator(name: str, request: Request):
     token = str(uuid.uuid4())
 
-    if name == "":
+    if not name:
         raise HTTPException(status_code=400, detail={
             "loc": "name",  "msg": "Enter a valid name"})
 
@@ -40,11 +40,11 @@ async def token_generator(name: str, request: Request):
     print(chat_session.dict())
 
     # Store chat session in redis JSON with the token as key
-    json_client.jsonset(str(token), Path.rootPath(), chat_session.dict())
+    json_client.jsonset(token, Path.rootPath(), chat_session.dict())
 
     # Set a timeout for redis data
     redis_client = await redis.create_connection()
-    await redis_client.expire(str(token), 3600)
+    await redis_client.expire(token, 3600)
 
     return chat_session.dict()
 
@@ -60,7 +60,7 @@ async def refresh_token(request: Request, token: str):
     cache = Cache(json_client)
     data = await cache.get_chat_history(token)
 
-    if data == None:
+    if data is None:
         raise HTTPException(
             status_code=400, detail="Session expired or does not exist")
     else:
@@ -82,8 +82,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Depends(get_toke
     try:
         while True:
             data = await websocket.receive_text()
-            stream_data = {}
-            stream_data[str(token)] = str(data)
+            stream_data = {token: str(data)}
             await producer.add_to_stream(stream_data, "message_channel")
             response = await consumer.consume_stream(stream_channel="response_channel", block=0)
 
